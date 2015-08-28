@@ -32,6 +32,10 @@ class Direction:
         yield Direction(-self.row, self.column)
         yield Direction(-self.row, -self.column)
 
+    @property
+    def switched(self):
+        return Direction(self.column, self.row)
+
     def __repr__(self):
         return '<Bearing %s mark %s>' % (self.row, self.column)
 
@@ -51,11 +55,13 @@ class Chessman:
         moves = []
         for move in self.quadrant_moves:
             moves += move.mirrors
+            moves += move.switched.mirrors
         return set(moves)
 
     def possible_moves(self):
         for move in self.all_moves:
             pos = self.move(move)
+            # TODO could be used as a decorator
             if pos.is_valid():  # TODO and not self.endangered_at(pos):
                 yield pos
 
@@ -64,8 +70,31 @@ class King(Chessman):
     quadrant_moves = [
         Direction(0, 1),
         Direction(1, 1),
-        Direction(1, 0),
     ]
+
+
+class Queen(Chessman):
+    quadrant_moves = Rook.quadrant_moves + Bishop.quadrant_moves
+
+
+class Rook(Chessman):
+    quadrant_moves = [Direction(0, i) for i in range(1, 8)]
+
+
+class Bishop(Chessman):
+    quadrant_moves = [Direction(i, i) for i in range(1, 8)]
+
+
+class Knight(Chessman):
+    quadrant_moves = [Direction(2, 1)]
+
+
+class Pawn(Chessman):
+    # TODO starting example
+    def possible_moves(self):
+        pos = self.move(Direction(1, 0))
+        if pos.is_valid():
+            yield pos
 
 
 class Board:
