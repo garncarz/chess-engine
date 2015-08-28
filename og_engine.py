@@ -64,8 +64,10 @@ class Direction:
 
     @property
     def normalized(self):
-        return Direction(1 if self.column else 0,
-                         1 if self.row else 0)
+        sign = lambda i: 0 if i == 0 \
+                         else 1 if i > 0 \
+                         else -1
+        return Direction(sign(self.column), sign(self.row))
 
     def __repr__(self):
         return '<Bearing %s mark %s>' % (self.column, self.row)
@@ -120,10 +122,10 @@ class Piece:
     def possible_moves(self):
         for dir in self.all_dirs:
             pos = self.pos + dir
-            if self.check_move(pos):
+            if self.check_move_to(pos):
                 yield Move(self.pos, pos)
 
-    def check_move(self, pos):
+    def check_move_to(self, pos):
         if not pos.is_valid:
             return False
         destination = self.board[pos]
@@ -142,7 +144,7 @@ class Piece:
         return True
 
     def __repr__(self):
-        return '<%s on %s>' % (self.__class__.__name__, self.pos)
+        return '<%s on %s>' % (self.sign, self.pos)
 
     @property
     def sign(self):
@@ -157,8 +159,8 @@ class King(Piece):
 
 
 class StraightLineMixin:
-    def check_move(self, pos):
-        return super().check_move(pos) and self.straight_line_to(pos)
+    def check_move_to(self, pos):
+        return super().check_move_to(pos) and self.straight_line_to(pos)
 
 
 class Rook(StraightLineMixin, Piece):
