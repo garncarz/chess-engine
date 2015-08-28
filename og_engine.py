@@ -19,6 +19,9 @@ class Position:
     def __repr__(self):
         return '<%s%s>' % (self.row, chr(ord('a') - 1 + self.column))
 
+    def __eq__(self, other):
+        return self.row == other.row and self.column == other.column
+
 
 class Direction:
     def __init__(self, row, column):
@@ -47,7 +50,9 @@ class Direction:
 
 
 class Chessman:
-    def __init__(self, row, column):
+    def __init__(self, player, board, row, column):
+        self.player = player
+        self.board = board
         self.pos = Position(row, column)
 
     def move(self, direction):
@@ -67,6 +72,18 @@ class Chessman:
             # TODO could be used as a decorator
             if pos.is_valid():  # TODO and not self.endangered_at(pos):
                 yield pos
+
+    def check_move(self, pos):
+        if not pos.is_valid():
+            return False
+        if self.board[pos].player == self.player:
+            return False
+        if self.is_move_restricted(pos):
+            return False
+        return True
+
+    def is_move_restricted(self, pos):
+        return False
 
     def __repr__(self):
         return '<%s on %s>' % (self.__class__.__name__, self.pos)
@@ -96,39 +113,61 @@ class Knight(Chessman):
 
 
 class Pawn(Chessman):
+    def __init__(self, *args, **kwargs):
+        self.heading = kwargs.pop('heading')
+        super().__init__(*args, **kwargs)
+
     # TODO starting example
     def possible_moves(self):
-        pos = self.move(Direction(1, 0))
+        pos = self.move(Direction(self.heading, 0))
         if pos.is_valid():
             yield pos
 
 
 
 class Player:
-    def __init__(self, color):
+    def __init__(self, color, board):
+        self.board = board
+        kwargs = {'player': self, 'board': self.board}
         if color == 'white':
-            row, pawn_row = 1, 2
+            kwargs.update({'row': 1})
+            pawn_kwargs = kwargs.copy()
+            pawn_kwargs.update({'row': 2, 'heading': 1})
         elif color == 'black':
-            row, pawn_row = 8, 7
+            kwargs.update({'row': 8})
+            pawn_kwargs = kwargs.copy()
+            pawn_kwargs.update({'row': 7, 'heading': -1})
         else:
             raise ValueError('bad color')
         self.pieces = (
-            [King(row, 5)] +
-            [Queen(row, 4)] +
-            [Bishop(row, c) for c in [3, 6]] +
-            [Knight(row, c) for c in [2, 7]] +
-            [Rook(row, c) for c in [1, 8]] +
-            [Pawn(pawn_row, c) for c in range(1, 8)]
+            [King(column=5, **kwargs)] +
+            [Queen(column=4, **kwargs)] +
+            [Bishop(column=c, **kwargs) for c in [3, 6]] +
+            [Knight(column=c, **kwargs) for c in [2, 7]] +
+            [Rook(column=c, **kwargs) for c in [1, 8]] +
+            [Pawn(column=c, **pawn_kwargs) for c in range(1, 8)]
         )
+
+    # TODO
+    def bestmove(self):
+        return
 
 
 class Board:
     def __init__(self):
-        self.white = Player('white')
-        self.black = Player('black')
+        self.white = Player('white', self)
+        self.black = Player('black', self)
+        self.active = self.black
+
+    def __getitem__(self, key):
+        for piece in self.white.pieces + self.black.pieces:
+            if piece.pos == key:
+                return piece
+        return None
 
 
 def main():
+    board = Board()
     while True:
         cmd = input()
         log.debug('received: %s' % cmd)
@@ -142,7 +181,7 @@ def main():
         elif cmd == 'isready':
             print('readyok')
         else:
-            print('bestmove e7e6')
+            print('bestmove %s' % board.active.bestmove())
 
 if __name__ == '__main__':
     log.addHandler(logging.FileHandler('og-engine.log'))
