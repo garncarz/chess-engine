@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import random
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +21,21 @@ class Position:
     def is_valid(self):
         return 1 <= self.row <= 8 and 1 <= self.column <= 8
 
+    def __str__(self):
+        return '%s%s' % (self.row, chr(ord('a') - 1 + self.column))
+
     def __repr__(self):
-        return '<%s%s>' % (self.row, chr(ord('a') - 1 + self.column))
+        return '<%s>' % str(self)
 
     def __eq__(self, other):
         return self.row == other.row and self.column == other.column
 
 
 class Direction:
+    """
+    Relative position diff, e.g. +2 rows, -1 column.
+    """
+
     def __init__(self, row, column):
         self.row = row
         self.column = column
@@ -58,6 +66,19 @@ class Direction:
         return self.row == other.row and self.column == other.column
 
 
+class Move:
+    """
+    Particular move, e.g. e2e4.
+    """
+
+    def __init__(self, old_pos, new_pos):
+        self.old_pos = old_pos
+        self.new_pos = new_pos
+
+    def __str__(self):
+        return '%s%s' % (self.old_pos, self.new_pos)
+
+
 class Chessman:
     def __init__(self, player, board, row, column):
         self.player = player
@@ -76,7 +97,7 @@ class Chessman:
         for move in self.all_moves:
             pos = self.pos + move
             if self.check_move(pos):
-                yield pos
+                yield Move(self.pos, pos)
 
     def check_move(self, pos):
         if not pos.is_valid:
@@ -112,16 +133,16 @@ class StraightLineMixin:
         return super().check_move(pos) and self.straight_line_to(pos)
 
 
-class Queen(StraightLineMixin, Chessman):
-    quadrant_moves = Rook.quadrant_moves + Bishop.quadrant_moves
-
-
 class Rook(StraightLineMixin, Chessman):
     quadrant_moves = [Direction(0, i) for i in range(1, 9)]
 
 
 class Bishop(StraightLineMixin, Chessman):
     quadrant_moves = [Direction(i, i) for i in range(1, 9)]
+
+
+class Queen(StraightLineMixin, Chessman):
+    quadrant_moves = Rook.quadrant_moves + Bishop.quadrant_moves
 
 
 class Knight(Chessman):
@@ -164,7 +185,13 @@ class Player:
 
     # TODO
     def bestmove(self):
-        return
+        while True:
+            try:
+                piece = random.choice(self.pieces)
+                move = random.choice(list(piece.possible_moves()))
+                return move
+            except IndexError:
+                pass
 
 
 class Board:
