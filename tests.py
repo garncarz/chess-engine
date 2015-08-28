@@ -3,6 +3,29 @@
 from subprocess import Popen, PIPE
 import unittest
 
+import og_engine
+
+
+class EngineTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.board = og_engine.Board()
+
+    def assertEqualMoves(self, moves, moves2):
+        """
+        moves expected to be Move instances,
+        moves2 expected to be in form ['e2e4', 'd2d3'].
+        """
+        moves = map(lambda m: str(m), moves)
+        self.assertEqual(set(moves), set(moves2))
+
+    def test_possible_moves(self):
+        pawn = self.board['e2']
+        self.assertTrue(isinstance(pawn, og_engine.Pawn))
+        moves = pawn.possible_moves()
+        self.assertEqualMoves(moves, ['e2e3'])
+
+
 class EngineIOTestCase(unittest.TestCase):
 
     def setUp(self):
