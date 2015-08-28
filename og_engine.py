@@ -189,6 +189,13 @@ class Pawn(Piece):
     def all_dirs(self):
         yield Direction(0, self.heading)
 
+    def check_move_to(self, pos):
+        destination = self.board[pos]
+        if destination:
+            return False
+        return super().check_move_to(pos)
+
+
 
 class Player:
     class Color(Enum):
@@ -267,10 +274,22 @@ class Board:
         return next(filter(lambda piece: piece.pos == key, self.pieces), None)
 
     def make_move(self, move):
+        # TODO promotions
+
         if isinstance(move, str):
             move = Move(move)
+
+        captured = self[move.new_pos]
+        if captured:
+            captured.player.pieces.remove(captured)
+
         piece = self[move.old_pos]
         piece.pos = move.new_pos
+
+    def bestmove(self):
+        move = self.active.bestmove()
+        self.make_move(move)
+        return move
 
     def __str__(self):
         board = ''
@@ -296,8 +315,10 @@ def main():
             print('uciok')
         elif cmd == 'isready':
             print('readyok')
-        else:
-            print('bestmove %s' % board.active.bestmove())
+        elif cmd.startswith('position '):
+            board.make_move(cmd.split()[-1])
+        elif cmd.startswith('go '):
+            print('bestmove %s' % board.bestmove())
 
 if __name__ == '__main__':
     log.addHandler(logging.FileHandler('og-engine.log'))
