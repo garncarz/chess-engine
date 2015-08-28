@@ -84,19 +84,29 @@ class Move:
     Particular move, e.g. e2e4.
     """
 
-    def __init__(self, *args):
+    def __init__(self, piece=None, new_pos=None, board=None, notation=None):
         """
-        Can be initialized both as old_pos, new_pos or 'e2e4'.
+        Can be initialized with:
+          - piece & new_pos
+          - board & notation
         """
-        if isinstance(args[0], str):
-            notation = args[0]
-            old_pos = Position(notation[:2])
-            new_pos = Position(notation[2:])
-        else:
-            old_pos = args[0]
-            new_pos = args[1]
-        self.old_pos = old_pos
-        self.new_pos = new_pos
+        if piece and new_pos:
+            self.piece = piece
+            self.board = piece.board
+            self.player = piece.player
+            self.old_pos = piece.pos
+            self.new_pos = new_pos
+        elif board and notation:
+            self.board = board
+            self.old_pos = Position(notation[:2])
+            self.new_pos = Position(notation[2:])
+
+    def evaluate(self):
+        score = 0
+        captured = self.board[self.new_pos]
+        if captured:
+            score += captured.capture_score
+        return score
 
     def __str__(self):
         return '%s%s' % (self.old_pos, self.new_pos)
@@ -106,6 +116,8 @@ class Move:
 
 
 class Piece:
+    capture_score = 1
+
     def __init__(self, player, board, column, row):
         self.player = player
         self.board = board
@@ -123,7 +135,7 @@ class Piece:
         for dir in self.all_dirs:
             pos = self.pos + dir
             if self.check_move_to(pos):
-                yield Move(self.pos, pos)
+                yield Move(self, pos)
 
     def check_move_to(self, pos):
         if not pos.is_valid:
@@ -142,6 +154,12 @@ class Piece:
                 return False
             pos += dir
         return True
+
+    def evaluate(self):
+        score = 0
+        for move in self.possible_moves():
+            score += move.evaluate()
+        return score
 
     def __repr__(self):
         return '<%s on %s>' % (self.sign, self.pos)
@@ -196,7 +214,6 @@ class Pawn(Piece):
         return super().check_move_to(pos)
 
 
-
 class Player:
     class Color(Enum):
         white = 0
@@ -242,8 +259,7 @@ class Player:
             [Pawn(column=c, **pawn_kwargs) for c in range(1, 9)]
         )
 
-    # TODO
-    def bestmove(self):
+    def rnd_move(self):
         while True:
             try:
                 piece = random.choice(self.pieces)
@@ -261,6 +277,7 @@ class Board:
         self.white = Player(Player.Color.white, self)
         self.black = Player(Player.Color.black, self)
         self.active = self.black
+        self.opponent = self.white
 
     @property
     def pieces(self):
@@ -277,7 +294,7 @@ class Board:
         # TODO promotions
 
         if isinstance(move, str):
-            move = Move(move)
+            move = Move(board=self, notation=move)
 
         captured = self[move.new_pos]
         if captured:
@@ -287,9 +304,15 @@ class Board:
         piece.pos = move.new_pos
 
     def bestmove(self):
-        move = self.active.bestmove()
+        move = sorted([self.active.rnd_move() for _ in range(10)],
+                      key=lambda move: move.evaluate())[-1]
         self.make_move(move)
         return move
+
+    def evaluate(self):
+        sum_eval = lambda player: sum(map(lambda piece: piece.evaluate(),
+                                          player.pieces))
+        return sum_eval(self.active) - sum_eval(self.opponent)
 
     def __str__(self):
         board = ''
