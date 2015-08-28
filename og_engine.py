@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from enum import Enum
 import logging
 import random
 
@@ -143,6 +144,10 @@ class Piece:
     def __repr__(self):
         return '<%s on %s>' % (self.__class__.__name__, self.pos)
 
+    @property
+    def sign(self):
+        return self.player.piece_sign(self.__class__)
+
 
 class King(Piece):
     quadrant_dirs = [
@@ -184,19 +189,41 @@ class Pawn(Piece):
 
 
 class Player:
+    class Color(Enum):
+        white = 0
+        black = 1
+
+    pieces_signs = {
+        Color.white: {
+            King: '♔',
+            Queen: '♕',
+            Rook: '♖',
+            Bishop: '♗',
+            Knight: '♘',
+            Pawn: '♙',
+        },
+        Color.black: {
+            King: '♚',
+            Queen: '♛',
+            Rook: '♜',
+            Bishop: '♝',
+            Knight: '♞',
+            Pawn: '♟',
+        },
+    }
+
     def __init__(self, color, board):
+        self.color = color
         self.board = board
         kwargs = {'player': self, 'board': self.board}
-        if color == 'white':
+        if color == Player.Color.white:
             kwargs.update({'row': 1})
             pawn_kwargs = kwargs.copy()
             pawn_kwargs.update({'row': 2, 'heading': 1})
-        elif color == 'black':
+        else:
             kwargs.update({'row': 8})
             pawn_kwargs = kwargs.copy()
             pawn_kwargs.update({'row': 7, 'heading': -1})
-        else:
-            raise ValueError('bad color')
         self.pieces = (
             [King(column=5, **kwargs)] +
             [Queen(column=4, **kwargs)] +
@@ -216,11 +243,14 @@ class Player:
             except IndexError:
                 pass
 
+    def piece_sign(self, piece):
+        return self.pieces_signs[self.color][piece]
+
 
 class Board:
     def __init__(self):
-        self.white = Player('white', self)
-        self.black = Player('black', self)
+        self.white = Player(Player.Color.white, self)
+        self.black = Player(Player.Color.black, self)
         self.active = self.black
 
     @property
@@ -239,6 +269,15 @@ class Board:
             move = Move(move)
         piece = self[move.old_pos]
         piece.pos = move.new_pos
+
+    def __str__(self):
+        board = ''
+        for row in range(8, 0, -1):
+            for column in range(1, 9):
+                piece = self[column, row]
+                board += piece.sign if piece else '.'
+            board += '\n'
+        return board
 
 
 def main():
