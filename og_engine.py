@@ -13,6 +13,10 @@ class Position:
     def __add__(self, other):
         return Position(self.row + other.row, self.column + other.column)
 
+    def __sub__(self, other):
+        return Direction(self.row - other.row, self.column - other.column)
+
+    @property
     def is_valid(self):
         return 1 <= self.row <= 8 and 1 <= self.column <= 8
 
@@ -39,6 +43,11 @@ class Direction:
     def switched(self):
         return Direction(self.column, self.row)
 
+    @property
+    def normalized(self):
+        return Direction(1 if self.row else 0,
+                         1 if self.column else 0)
+
     def __repr__(self):
         return '<Bearing %s mark %s>' % (self.row, self.column)
 
@@ -55,9 +64,6 @@ class Chessman:
         self.board = board
         self.pos = Position(row, column)
 
-    def move(self, direction):
-        return self.pos + direction
-
     @property
     def all_moves(self):
         moves = []
@@ -68,22 +74,27 @@ class Chessman:
 
     def possible_moves(self):
         for move in self.all_moves:
-            pos = self.move(move)
-            # TODO could be used as a decorator
-            if pos.is_valid():  # TODO and not self.endangered_at(pos):
+            pos = self.pos + move
+            if self.check_move(pos):
                 yield pos
 
     def check_move(self, pos):
-        if not pos.is_valid():
+        if not pos.is_valid:
             return False
-        if self.board[pos].player == self.player:
+        destination = self.board[pos]
+        if destination and destination.player == self.player:
             return False
-        if self.is_move_restricted(pos):
-            return False
+        # TODO check for check
         return True
 
-    def is_move_restricted(self, pos):
-        return False
+    def straight_line_to(self, end_pos):
+        dir = (end_pos - self.pos).normalized
+        pos = self.pos + dir
+        while pos != end_pos and pos.is_valid:
+            if self.board[pos]:
+                return False
+            pos += dir
+        return True
 
     def __repr__(self):
         return '<%s on %s>' % (self.__class__.__name__, self.pos)
@@ -96,16 +107,21 @@ class King(Chessman):
     ]
 
 
-class Queen(Chessman):
+class StraightLineMixin:
+    def check_move(self, pos):
+        return super().check_move(pos) and self.straight_line_to(pos)
+
+
+class Queen(StraightLineMixin, Chessman):
     quadrant_moves = Rook.quadrant_moves + Bishop.quadrant_moves
 
 
-class Rook(Chessman):
-    quadrant_moves = [Direction(0, i) for i in range(1, 8)]
+class Rook(StraightLineMixin, Chessman):
+    quadrant_moves = [Direction(0, i) for i in range(1, 9)]
 
 
-class Bishop(Chessman):
-    quadrant_moves = [Direction(i, i) for i in range(1, 8)]
+class Bishop(StraightLineMixin, Chessman):
+    quadrant_moves = [Direction(i, i) for i in range(1, 9)]
 
 
 class Knight(Chessman):
@@ -118,11 +134,9 @@ class Pawn(Chessman):
         super().__init__(*args, **kwargs)
 
     # TODO starting example
-    def possible_moves(self):
-        pos = self.move(Direction(self.heading, 0))
-        if pos.is_valid():
-            yield pos
-
+    @property
+    def all_moves(self):
+        yield Direction(self.heading, 0)
 
 
 class Player:
@@ -145,7 +159,7 @@ class Player:
             [Bishop(column=c, **kwargs) for c in [3, 6]] +
             [Knight(column=c, **kwargs) for c in [2, 7]] +
             [Rook(column=c, **kwargs) for c in [1, 8]] +
-            [Pawn(column=c, **pawn_kwargs) for c in range(1, 8)]
+            [Pawn(column=c, **pawn_kwargs) for c in range(1, 9)]
         )
 
     # TODO
