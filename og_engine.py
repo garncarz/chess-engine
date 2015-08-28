@@ -109,16 +109,16 @@ class Piece:
         self.pos = Position(column, row)
 
     @property
-    def all_moves(self):
-        moves = []
-        for move in self.quadrant_moves:
-            moves += move.mirrors
-            moves += move.switched.mirrors
-        return set(moves)
+    def all_dirs(self):
+        dirs = []
+        for dir in self.quadrant_dirs:
+            dirs += dir.mirrors
+            dirs += dir.switched.mirrors
+        return set(dirs)
 
     def possible_moves(self):
-        for move in self.all_moves:
-            pos = self.pos + move
+        for dir in self.all_dirs:
+            pos = self.pos + dir
             if self.check_move(pos):
                 yield Move(self.pos, pos)
 
@@ -145,7 +145,7 @@ class Piece:
 
 
 class King(Piece):
-    quadrant_moves = [
+    quadrant_dirs = [
         Direction(0, 1),
         Direction(1, 1),
     ]
@@ -157,19 +157,19 @@ class StraightLineMixin:
 
 
 class Rook(StraightLineMixin, Piece):
-    quadrant_moves = [Direction(0, i) for i in range(1, 9)]
+    quadrant_dirs = [Direction(0, i) for i in range(1, 9)]
 
 
 class Bishop(StraightLineMixin, Piece):
-    quadrant_moves = [Direction(i, i) for i in range(1, 9)]
+    quadrant_dirs = [Direction(i, i) for i in range(1, 9)]
 
 
 class Queen(StraightLineMixin, Piece):
-    quadrant_moves = Rook.quadrant_moves + Bishop.quadrant_moves
+    quadrant_dirs = Rook.quadrant_dirs + Bishop.quadrant_dirs
 
 
 class Knight(Piece):
-    quadrant_moves = [Direction(2, 1)]
+    quadrant_dirs = [Direction(2, 1)]
 
 
 class Pawn(Piece):
@@ -179,7 +179,7 @@ class Pawn(Piece):
 
     # TODO starting example
     @property
-    def all_moves(self):
+    def all_dirs(self):
         yield Direction(0, self.heading)
 
 
@@ -233,6 +233,12 @@ class Board:
         elif isinstance(key, str):
             key = Position(key)
         return next(filter(lambda piece: piece.pos == key, self.pieces), None)
+
+    def make_move(self, move):
+        if isinstance(move, str):
+            move = Move(move)
+        piece = self[move.old_pos]
+        piece.pos = move.new_pos
 
 
 def main():

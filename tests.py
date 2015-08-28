@@ -11,19 +11,24 @@ class EngineTestCase(unittest.TestCase):
     def setUp(self):
         self.board = og_engine.Board()
 
-    def assertEqualMoves(self, moves, moves2):
+    def assertPossibleMoves(self, piece, moves):
         """
-        moves expected to be Move instances,
-        moves2 expected to be in form ['e2e4', 'd2d3'].
+        moves expected to be in form ['e2e4', 'd2d3'].
         """
-        moves = map(lambda m: str(m), moves)
+        moves2 = map(lambda m: str(m), piece.possible_moves())
         self.assertEqual(set(moves), set(moves2))
 
     def test_possible_moves(self):
         pawn = self.board['e2']
         self.assertTrue(isinstance(pawn, og_engine.Pawn))
-        moves = pawn.possible_moves()
-        self.assertEqualMoves(moves, ['e2e3'])
+        self.assertPossibleMoves(pawn, ['e2e3'])
+
+        queen = self.board['d1']
+        self.assertTrue(isinstance(queen, og_engine.Queen))
+        self.assertPossibleMoves(queen, [])
+
+        self.board.make_move('e2e3')
+        self.assertPossibleMoves(queen, ['d1e2', 'd1f3', 'd1g4', 'd1h5'])
 
 
 class EngineIOTestCase(unittest.TestCase):
