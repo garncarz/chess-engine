@@ -47,6 +47,9 @@ class Direction:
 
 
 class Chessman:
+    def __init__(self, row, column):
+        self.pos = Position(row, column)
+
     def move(self, direction):
         return self.pos + direction
 
@@ -64,6 +67,9 @@ class Chessman:
             # TODO could be used as a decorator
             if pos.is_valid():  # TODO and not self.endangered_at(pos):
                 yield pos
+
+    def __repr__(self):
+        return '<%s on %s>' % (self.__class__.__name__, self.pos)
 
 
 class King(Chessman):
@@ -97,8 +103,29 @@ class Pawn(Chessman):
             yield pos
 
 
+
+class Player:
+    def __init__(self, color):
+        if color == 'white':
+            row, pawn_row = 1, 2
+        elif color == 'black':
+            row, pawn_row = 8, 7
+        else:
+            raise ValueError('bad color')
+        self.pieces = (
+            [King(row, 5)] +
+            [Queen(row, 4)] +
+            [Bishop(row, c) for c in [3, 6]] +
+            [Knight(row, c) for c in [2, 7]] +
+            [Rook(row, c) for c in [1, 8]] +
+            [Pawn(pawn_row, c) for c in range(1, 8)]
+        )
+
+
 class Board:
-    pass
+    def __init__(self):
+        self.white = Player('white')
+        self.black = Player('black')
 
 
 def main():
