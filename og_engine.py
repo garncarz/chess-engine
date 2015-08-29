@@ -202,15 +202,27 @@ class Pawn(Piece):
         self.heading = kwargs.pop('heading')
         super().__init__(*args, **kwargs)
 
+        self.dir_forward = Direction(0, self.heading)
+        self.dir_captures = [
+            Direction(1, self.heading),
+            Direction(-1, self.heading),
+        ]
+
     # TODO starting example
     @property
     def all_dirs(self):
-        yield Direction(0, self.heading)
+        yield self.dir_forward
+        for dir in self.dir_captures:
+            capture = self.board[self.pos + dir]
+            if capture and capture.player != self.player:
+                yield dir
 
     def check_move_to(self, pos):
-        destination = self.board[pos]
-        if destination:
-            return False
+        if pos.column == self.pos.column:
+            # TODO en passant
+            destination = self.board[pos]
+            if destination:
+                return False
         return super().check_move_to(pos)
 
 
