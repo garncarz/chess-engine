@@ -108,6 +108,18 @@ class Move:
             score += captured.capture_score
         return score
 
+    def evaluate_complete(self):
+        score = self.evaluate()
+
+        # FIXME should be done in a lighter manner
+        # e.g. working with history of moves, being able to get back
+        import copy
+        board = copy.deepcopy(self.board)
+        board.make_move(self)
+        score += board.evaluate()
+
+        return score
+
     def __str__(self):
         return '%s%s' % (self.old_pos, self.new_pos)
 
@@ -116,8 +128,6 @@ class Move:
 
 
 class Piece:
-    capture_score = 1
-
     def __init__(self, player, board, column, row):
         self.player = player
         self.board = board
@@ -170,6 +180,7 @@ class Piece:
 
 
 class King(Piece):
+    capture_score = 100
     quadrant_dirs = [
         Direction(0, 1),
         Direction(1, 1),
@@ -182,22 +193,28 @@ class StraightLineMixin:
 
 
 class Rook(StraightLineMixin, Piece):
+    capture_score = 30
     quadrant_dirs = [Direction(0, i) for i in range(1, 9)]
 
 
 class Bishop(StraightLineMixin, Piece):
+    capture_score = 20
     quadrant_dirs = [Direction(i, i) for i in range(1, 9)]
 
 
 class Queen(StraightLineMixin, Piece):
+    capture_score = 50
     quadrant_dirs = Rook.quadrant_dirs + Bishop.quadrant_dirs
 
 
 class Knight(Piece):
+    capture_score = 15
     quadrant_dirs = [Direction(2, 1)]
 
 
 class Pawn(Piece):
+    capture_score = 1
+
     def __init__(self, *args, **kwargs):
         self.heading = kwargs.pop('heading')
         super().__init__(*args, **kwargs)
@@ -316,8 +333,8 @@ class Board:
         piece.pos = move.new_pos
 
     def bestmove(self):
-        move = sorted([self.active.rnd_move() for _ in range(10)],
-                      key=lambda move: move.evaluate())[-1]
+        move = sorted([self.active.rnd_move() for _ in range(100)],
+                      key=lambda move: move.evaluate_complete())[-1]
         self.make_move(move)
         return move
 
