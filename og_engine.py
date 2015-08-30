@@ -116,7 +116,7 @@ class Move:
         import copy
         board = copy.deepcopy(self.board)
         board.make_move(self)
-        score += board.evaluate()
+        score += 0.3 * board.evaluate()
 
         return score
 
@@ -341,7 +341,7 @@ class Board:
     def evaluate(self):
         sum_eval = lambda player: sum(map(lambda piece: piece.evaluate(),
                                           player.pieces))
-        return sum_eval(self.active) - sum_eval(self.opponent)
+        return sum_eval(self.active) - 2 * sum_eval(self.opponent)
 
     def __str__(self):
         board = ''
