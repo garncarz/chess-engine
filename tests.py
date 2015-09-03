@@ -30,6 +30,17 @@ class EngineTestCase(unittest.TestCase):
         self.board.make_move('e2e3')
         self.assertPossibleMoves(queen, ['d1e2', 'd1f3', 'd1g4', 'd1h5'])
 
+    def test_history(self):
+        history = lambda: list(map(lambda m: str(m), self.board.history))
+        self.board.make_move('d2d4')
+        self.assertEqual(history(), ['d2d4'])
+        self.board.make_move('e7e5')
+        self.assertEqual(history(), ['d2d4', 'e7e5'])
+        self.assertEqual(self.board.history[-1].captured, None)
+        self.board.make_move('d4e5')
+        self.assertEqual(history(), ['d2d4', 'e7e5', 'd4e5'])
+        self.assertEqual(str(self.board.history[-1].captured), '<♟ on e5>')
+
 
 class EngineIOTestCase(unittest.TestCase):
 

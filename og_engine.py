@@ -93,13 +93,16 @@ class Move:
         if piece and new_pos:
             self.piece = piece
             self.board = piece.board
-            self.player = piece.player
             self.old_pos = piece.pos
             self.new_pos = new_pos
         elif board and notation:
             self.board = board
             self.old_pos = Position(notation[:2])
             self.new_pos = Position(notation[2:])
+            self.piece = self.board[self.old_pos]
+
+        self.player = self.piece.player
+        self.captured = self.board[self.new_pos]
 
     def evaluate(self):
         score = 0
@@ -170,6 +173,10 @@ class Piece:
         for move in self.possible_moves():
             score += move.evaluate()
         return score
+
+    def leave(self):
+        """Removes itself from playing pieces."""
+        self.player.pieces.remove(self)
 
     def __repr__(self):
         return '<%s on %s>' % (self.sign, self.pos)
@@ -307,6 +314,7 @@ class Board:
         self.black = Player(Player.Color.black, self)
         self.active = self.black
         self.opponent = self.white
+        self.history = []
 
     @property
     def pieces(self):
@@ -325,12 +333,13 @@ class Board:
         if isinstance(move, str):
             move = Move(board=self, notation=move)
 
-        captured = self[move.new_pos]
-        if captured:
-            captured.player.pieces.remove(captured)
+        if move.captured:
+            move.captured.leave()
 
         piece = self[move.old_pos]
         piece.pos = move.new_pos
+
+        self.history.append(move)
 
     def bestmove(self):
         move = sorted([self.active.rnd_move() for _ in range(100)],
