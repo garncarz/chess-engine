@@ -1,5 +1,7 @@
 *~
+*.coverage
 *.sw*
 *.log
 
-__pycache__
+__pycache__/
+htmlcov/
