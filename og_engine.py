@@ -112,6 +112,7 @@ class Move:
         return score
 
     def evaluate_complete(self):
+        log.debug('evaluating %s...' % self)
         score = self.evaluate()
 
         # FIXME should be done in a lighter manner
@@ -121,13 +122,18 @@ class Move:
         board.make_move(self)
         score += 0.3 * board.evaluate()
 
+        log.debug('evaluated %s as %f' % (self, score))
         return score
 
     def __str__(self):
+        return '%s%s%s' % (self.piece.sign, self.old_pos, self.new_pos)
+
+    @property
+    def short_str(self):
         return '%s%s' % (self.old_pos, self.new_pos)
 
     def __repr__(self):
-        return '<%s at %s>' % (str(self), hex(id(self)))
+        return '<%s at %s>' % (self, hex(id(self)))
 
 
 class Piece:
@@ -300,6 +306,7 @@ class Player:
             try:
                 piece = random.choice(self.pieces)
                 move = random.choice(list(piece.possible_moves()))
+                log.debug('rnd_move: %s' % move)
                 return move
             except IndexError:
                 pass
@@ -342,7 +349,7 @@ class Board:
         self.history.append(move)
 
     def bestmove(self):
-        move = sorted([self.active.rnd_move() for _ in range(100)],
+        move = sorted([self.active.rnd_move() for _ in range(20)],
                       key=lambda move: move.evaluate_complete())[-1]
         self.make_move(move)
         return move
@@ -362,6 +369,10 @@ class Board:
         return board
 
 
+def send(msg):
+    log.debug('sending: %s' % msg)
+    print(msg)
+
 def main():
     board = Board()
     while True:
@@ -371,15 +382,18 @@ def main():
         if cmd == 'quit':
             break
         elif cmd == 'uci':
-            print('id name og-engine')
-            print('id author og')
-            print('uciok')
+            send('id name og-engine')
+            send('id author og')
+            send('uciok')
         elif cmd == 'isready':
-            print('readyok')
+            send('readyok')
+        elif cmd == 'position startpos':
+            board.active = board.white
+            board.opponent = board.black
         elif cmd.startswith('position '):
             board.make_move(cmd.split()[-1])
         elif cmd.startswith('go '):
-            print('bestmove %s' % board.bestmove())
+            send('bestmove %s' % board.bestmove())
 
 if __name__ == '__main__':
     log.addHandler(logging.FileHandler('og-engine.log'))

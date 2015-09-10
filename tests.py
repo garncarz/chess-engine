@@ -15,7 +15,7 @@ class EngineTestCase(unittest.TestCase):
         """
         moves expected to be in form ['e2e4', 'd2d3'].
         """
-        moves2 = map(lambda m: str(m), piece.possible_moves())
+        moves2 = map(lambda m: m.short_str, piece.possible_moves())
         self.assertEqual(set(moves), set(moves2))
 
     def test_possible_moves(self):
@@ -31,7 +31,7 @@ class EngineTestCase(unittest.TestCase):
         self.assertPossibleMoves(queen, ['d1e2', 'd1f3', 'd1g4', 'd1h5'])
 
     def test_history(self):
-        history = lambda: list(map(lambda m: str(m), self.board.history))
+        history = lambda: list(map(lambda m: m.short_str, self.board.history))
         self.board.make_move('d2d4')
         self.assertEqual(history(), ['d2d4'])
         self.board.make_move('e7e5')
@@ -69,6 +69,16 @@ class EngineIOTestCase(unittest.TestCase):
         self.assertRead('uciok')
         self.write('isready')
         self.assertRead('readyok')
+
+    def test_start_as_white(self):
+        self.write('position startpos')
+        self.write('go blablabla')
+        self.assertTrue(self.read().startswith('bestmove'))
+
+    def test_start_as_black(self):
+        self.write('position startpos moves d2d3')
+        self.write('go blablabla')
+        self.assertTrue(self.read().startswith('bestmove'))
 
 
 if __name__ == '__main__':
