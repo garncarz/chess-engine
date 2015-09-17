@@ -135,6 +135,12 @@ class Move:
     def __repr__(self):
         return '<%s at %s>' % (self, hex(id(self)))
 
+    # TODO is it right? it can mean a movement of another piece at another time
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.short_str == other
+        return self.old_pos == other.pos and self.new_pos == other.new_pos
+
 
 class Piece:
     def __init__(self, player, board, column, row):
@@ -319,9 +325,16 @@ class Board:
     def __init__(self):
         self.white = Player(Player.Color.white, self)
         self.black = Player(Player.Color.black, self)
-        self.active = self.black
-        self.opponent = self.white
         self.history = []
+
+    @property
+    def active(self):
+        return list({self.white, self.black} - {self.history[-1].player})[0] \
+               if self.history else self.white
+
+    @property
+    def opponent(self):
+        return list({self.white, self.black} - {self.active})[0]
 
     @property
     def pieces(self):
@@ -347,6 +360,25 @@ class Board:
         piece.pos = move.new_pos
 
         self.history.append(move)
+
+    def sync_moves(self, moves):
+        recreate = False
+        if len(moves) <= len(self.history):
+            recreate = True
+        else:
+            for i, move in enumerate(moves[:len(self.history)]):
+                if self.history[i] != move:
+                    log.debug('history diverges at %d: my %s x their %s'
+                              % (i, self.history[i], move))
+                    recreate = True
+                    break
+
+        if recreate:
+            log.debug('recreating board')
+            self.__init__()
+
+        for move in moves[len(self.history):]:
+            self.make_move(move)
 
     def bestmove(self):
         move = sorted([self.active.rnd_move() for _ in range(20)],
@@ -374,7 +406,6 @@ def send(msg):
     print(msg)
 
 def main():
-    board = Board()
     while True:
         cmd = input()
         log.debug('received: %s' % cmd)
@@ -387,11 +418,11 @@ def main():
             send('uciok')
         elif cmd == 'isready':
             send('readyok')
-        elif cmd == 'position startpos':
-            board.active = board.white
-            board.opponent = board.black
-        elif cmd.startswith('position '):
-            board.make_move(cmd.split()[-1])
+        elif cmd == 'ucinewgame':
+            board = Board()
+        elif cmd.startswith('position startpos'):
+            moves = cmd.split()[3:]
+            board.sync_moves(moves)
         elif cmd.startswith('go '):
             send('bestmove %s' % board.bestmove())
 

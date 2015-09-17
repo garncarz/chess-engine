@@ -41,6 +41,29 @@ class EngineTestCase(unittest.TestCase):
         self.assertEqual(history(), ['d2d4', 'e7e5', 'd4e5'])
         self.assertEqual(str(self.board.history[-1].captured), '<♟ on e5>')
 
+    def test_alter_history(self):
+        self.board.make_move('d2d4')
+        self.assertEqual(self.board['d4'].sign, '♙')
+        self.board.sync_moves(['e2e4'])
+        self.assertFalse(self.board['d4'])
+        self.assertEqual(self.board['e4'].sign, '♙')
+
+    def test_alter_history2(self):
+        self.board.make_move('d2d4')
+        self.assertEqual(self.board['d4'].sign, '♙')
+        self.board.sync_moves(['e2e4', 'g8f6'])
+        self.assertFalse(self.board['d4'])
+        self.assertEqual(self.board['e4'].sign, '♙')
+        self.assertEqual(self.board['f6'].sign, '♞')
+
+    def test_capture(self):
+        self.board.sync_moves(['g1h3', 'g7g5', 'h3g5'])
+        self.assertEqual(self.board['g5'].sign, '♘')
+        self.assertEqual(
+            sum(map(lambda p: int(p.sign == '♟'), self.board.black.pieces)),
+            7
+        )
+
 
 class EngineIOTestCase(unittest.TestCase):
 
@@ -71,11 +94,13 @@ class EngineIOTestCase(unittest.TestCase):
         self.assertRead('readyok')
 
     def test_start_as_white(self):
+        self.write('ucinewgame')
         self.write('position startpos')
         self.write('go blablabla')
         self.assertTrue(self.read().startswith('bestmove'))
 
     def test_start_as_black(self):
+        self.write('ucinewgame')
         self.write('position startpos moves d2d3')
         self.write('go blablabla')
         self.assertTrue(self.read().startswith('bestmove'))
