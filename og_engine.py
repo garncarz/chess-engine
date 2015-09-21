@@ -115,11 +115,9 @@ class Move:
         log.debug('evaluating %s...' % self)
         score = self.evaluate()
 
-        # FIXME should be done in a lighter manner
-        # e.g. working with history of moves, being able to get back
-        import copy
-        board = copy.deepcopy(self.board)
+        board = self.board.sandbox
         board.make_move(self)
+        board.undo_move()
         score += 0.3 * board.evaluate()
 
         log.debug('evaluated %s as %f' % (self, score))
@@ -139,7 +137,7 @@ class Move:
     def __eq__(self, other):
         if isinstance(other, str):
             return self.short_str == other
-        return self.old_pos == other.pos and self.new_pos == other.new_pos
+        return self.old_pos == other.old_pos and self.new_pos == other.new_pos
 
 
 class Piece:
@@ -189,6 +187,10 @@ class Piece:
     def leave(self):
         """Removes itself from playing pieces."""
         self.player.pieces.remove(self)
+
+    def revive(self):
+        """Returns to game."""
+        self.player.pieces.append(self)
 
     def __repr__(self):
         return '<%s on %s>' % (self.sign, self.pos)
@@ -322,10 +324,11 @@ class Player:
 
 
 class Board:
-    def __init__(self):
+    def __init__(self, sandbox=False):
         self.white = Player(Player.Color.white, self)
         self.black = Player(Player.Color.black, self)
         self.history = []
+        self.sandbox = Board(sandbox=True) if not sandbox else None
 
     @property
     def active(self):
@@ -350,6 +353,11 @@ class Board:
     def make_move(self, move):
         # TODO promotions
 
+        if self.sandbox:
+            assert len(self.history) == len(self.sandbox.history)
+            if self.history:
+                assert self.history[-1] == self.sandbox.history[-1]
+
         if isinstance(move, str):
             move = Move(board=self, notation=move)
 
@@ -360,6 +368,21 @@ class Board:
         piece.pos = move.new_pos
 
         self.history.append(move)
+
+        if self.sandbox:
+            self.sandbox.make_move(move.short_str)
+
+    def undo_move(self):
+        move = self.history.pop()
+
+        piece = self[move.new_pos]
+        piece.pos = move.old_pos
+
+        if move.captured:
+            move.captured.revive()
+
+        if self.sandbox:
+            self.sandbox.undo_move()
 
     def sync_moves(self, moves):
         recreate = False
@@ -424,7 +447,7 @@ def main():
             moves = cmd.split()[3:]
             board.sync_moves(moves)
         elif cmd.startswith('go '):
-            send('bestmove %s' % board.bestmove())
+            send('bestmove %s' % board.bestmove().short_str)
 
 if __name__ == '__main__':
     log.addHandler(logging.FileHandler('og-engine.log'))

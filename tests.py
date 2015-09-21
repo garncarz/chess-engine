@@ -2,6 +2,7 @@
 
 from subprocess import Popen, PIPE
 import unittest
+import re
 
 import og_engine
 
@@ -64,6 +65,10 @@ class EngineTestCase(unittest.TestCase):
             7
         )
 
+    def test_best_move(self):
+        self.board.sync_moves(['g1h3', 'g7g5', 'h3g5'])
+        self.board.bestmove()
+
 
 class EngineIOTestCase(unittest.TestCase):
 
@@ -97,13 +102,13 @@ class EngineIOTestCase(unittest.TestCase):
         self.write('ucinewgame')
         self.write('position startpos')
         self.write('go blablabla')
-        self.assertTrue(self.read().startswith('bestmove'))
+        self.assertTrue(re.match('bestmove [a-h][1-8][a-h][1-8]', self.read()))
 
     def test_start_as_black(self):
         self.write('ucinewgame')
         self.write('position startpos moves d2d3')
         self.write('go blablabla')
-        self.assertTrue(self.read().startswith('bestmove'))
+        self.assertTrue(re.match('bestmove [a-h][1-8][a-h][1-8]', self.read()))
 
 
 if __name__ == '__main__':
