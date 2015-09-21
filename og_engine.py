@@ -424,11 +424,11 @@ class Board:
         return board
 
 
-def send(msg):
+def send(msg):  # pragma: no cover
     log.debug('sending: %s' % msg)
     print(msg)
 
-def main():
+def main():  # pragma: no cover
     while True:
         cmd = input()
         log.debug('received: %s' % cmd)
@@ -449,7 +449,7 @@ def main():
         elif cmd.startswith('go '):
             send('bestmove %s' % board.bestmove().notation)
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     log.addHandler(logging.FileHandler('og-engine.log'))
     log.setLevel(logging.DEBUG)
 
