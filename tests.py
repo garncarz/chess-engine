@@ -16,7 +16,7 @@ class EngineTestCase(unittest.TestCase):
         """
         moves expected to be in form ['e2e4', 'd2d3'].
         """
-        moves2 = map(lambda m: m.short_str, piece.possible_moves())
+        moves2 = map(lambda m: m.notation, piece.possible_moves())
         self.assertEqual(set(moves), set(moves2))
 
     def test_possible_moves(self):
@@ -32,7 +32,7 @@ class EngineTestCase(unittest.TestCase):
         self.assertPossibleMoves(queen, ['d1e2', 'd1f3', 'd1g4', 'd1h5'])
 
     def test_history(self):
-        history = lambda: list(map(lambda m: m.short_str, self.board.history))
+        history = lambda: list(map(lambda m: m.notation, self.board.history))
         self.board.make_move('d2d4')
         self.assertEqual(history(), ['d2d4'])
         self.board.make_move('e7e5')

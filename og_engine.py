@@ -127,7 +127,7 @@ class Move:
         return '%s%s%s' % (self.piece.sign, self.old_pos, self.new_pos)
 
     @property
-    def short_str(self):
+    def notation(self):
         return '%s%s' % (self.old_pos, self.new_pos)
 
     def __repr__(self):
@@ -136,7 +136,7 @@ class Move:
     # TODO is it right? it can mean a movement of another piece at another time
     def __eq__(self, other):
         if isinstance(other, str):
-            return self.short_str == other
+            return self.notation == other
         return self.old_pos == other.old_pos and self.new_pos == other.new_pos
 
 
@@ -370,7 +370,7 @@ class Board:
         self.history.append(move)
 
         if self.sandbox:
-            self.sandbox.make_move(move.short_str)
+            self.sandbox.make_move(move.notation)
 
     def undo_move(self):
         move = self.history.pop()
@@ -447,7 +447,7 @@ def main():
             moves = cmd.split()[3:]
             board.sync_moves(moves)
         elif cmd.startswith('go '):
-            send('bestmove %s' % board.bestmove().short_str)
+            send('bestmove %s' % board.bestmove().notation)
 
 if __name__ == '__main__':
     log.addHandler(logging.FileHandler('og-engine.log'))
