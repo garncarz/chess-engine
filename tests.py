@@ -65,6 +65,11 @@ class EngineTestCase(unittest.TestCase):
             7
         )
 
+    def test_promotion(self):
+        # TODO set a board and test promotion being both understood
+        # and proposed; it also has to be undoable
+        pass
+
     def test_best_move(self):
         self.board.sync_moves(['g1h3', 'g7g5', 'h3g5'])
         self.board.bestmove()

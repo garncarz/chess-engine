@@ -90,16 +90,34 @@ class Move:
           - piece & new_pos
           - board & notation
         """
+        self.promotion = None
         if piece and new_pos:
             self.piece = piece
             self.board = piece.board
             self.old_pos = piece.pos
             self.new_pos = new_pos
+
+            # automatic promotion
+            # FIXME does it belong here?
+            if isinstance(self.piece, Pawn) and self.new_pos.row in [1, 8]:
+                self.promotion = {
+                    'from': self.piece,
+                    'to': Queen(self.piece.player, self.board,
+                                self.old_pos.column, self.old_pos.row),
+                }
+
         elif board and notation:
             self.board = board
             self.old_pos = Position(notation[:2])
             self.new_pos = Position(notation[2:])
             self.piece = self.board[self.old_pos]
+
+            if len(notation) > 4:  # TODO type of promotion
+                self.promotion = {
+                    'from': self.piece,
+                    'to': Queen(self.piece.player, self.board,
+                                self.old_pos.column, self.old_pos.row),
+                }
 
         self.player = self.piece.player
         self.captured = self.board[self.new_pos]
@@ -123,12 +141,18 @@ class Move:
         log.debug('evaluated %s as %f' % (self, score))
         return score
 
+    @property
+    def promotion_sign(self):
+        # TODO
+        return '' if not self.promotion else 'q'
+
     def __str__(self):
-        return '%s%s%s' % (self.piece.sign, self.old_pos, self.new_pos)
+        return '%s%s%s%s' % (self.piece.sign, self.old_pos, self.new_pos,
+                             self.promotion_sign)
 
     @property
     def notation(self):
-        return '%s%s' % (self.old_pos, self.new_pos)
+        return '%s%s%s' % (self.old_pos, self.new_pos, self.promotion_sign)
 
     def __repr__(self):
         return '<%s at %s>' % (self, hex(id(self)))
@@ -188,8 +212,8 @@ class Piece:
         """Removes itself from playing pieces."""
         self.player.pieces.remove(self)
 
-    def revive(self):
-        """Returns to game."""
+    def join(self):
+        """Joins the game."""
         self.player.pieces.append(self)
 
     def __repr__(self):
@@ -201,7 +225,7 @@ class Piece:
 
 
 class King(Piece):
-    capture_score = 100
+    capture_score = 1000
     quadrant_dirs = [
         Direction(0, 1),
         Direction(1, 1),
@@ -351,8 +375,6 @@ class Board:
         return next(filter(lambda piece: piece.pos == key, self.pieces), None)
 
     def make_move(self, move):
-        # TODO promotions
-
         if self.sandbox:
             assert len(self.history) == len(self.sandbox.history)
             if self.history:
@@ -363,6 +385,9 @@ class Board:
 
         if move.captured:
             move.captured.leave()
+        if move.promotion:
+            move.promotion['from'].leave()
+            move.promotion['to'].join()
 
         piece = self[move.old_pos]
         piece.pos = move.new_pos
@@ -378,8 +403,11 @@ class Board:
         piece = self[move.new_pos]
         piece.pos = move.old_pos
 
+        if move.promotion:
+            move.promotion['to'].leave()
+            move.promotion['from'].join()
         if move.captured:
-            move.captured.revive()
+            move.captured.join()
 
         if self.sandbox:
             self.sandbox.undo_move()
