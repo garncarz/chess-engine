@@ -74,6 +74,38 @@ class EngineTestCase(unittest.TestCase):
         self.board.sync_moves(['g1h3', 'g7g5', 'h3g5'])
         self.board.bestmove()
 
+    def test_pgn_match(self):
+        m = lambda notation: og_engine.Move.pgn_re.match(notation)
+        clean = lambda m: {k:v for k,v in m.items() if v}
+        test = lambda notation, expected: self.assertEqual(
+            set(clean(m(notation).groupdict())),
+            set(expected)
+        )
+        test_none = lambda notation: self.assertFalse(m(notation))
+
+        test('e4', {'new_pos_col': 'e', 'new_pos_row': '4'})
+        test('exd5', {'old_pos_col': 'e', 'capture': 'x',
+                      'new_pos_col': 'd', 'new_pos_row': '5'})
+        test('Qxf6', {'piece': 'Q', 'capture': 'x',
+                      'new_pos_col': 'f', 'new_pos_row': '6'})
+        test('Rhe1+', {'piece': 'R', 'old_pos_col': 'h',
+                       'new_pos_col': 'e', 'new_pos_row': '1',
+                       'check': 'x'})
+        test('O-O-O', {'castling': 'O-O-O'})
+        test('Re8#', {'piece': 'R',
+                      'new_pos_col': 'e', 'new_pos_row': '8',
+                      'checkmate': '#'})
+        test('O-O+', {'castling': 'O-O', 'check': '+'})
+        test('hxg4+', {'old_pos_col': 'h', 'capture': 'x',
+                       'new_pos_col': 'g', 'new_pos_row': '4',
+                       'check': '+'})
+        test('g1=Q+', {'new_pos_col': 'g', 'new_pos_row': '1',
+                       'promotion': 'Q', 'check': '+'})
+
+        test_none('i5')
+        test_none('e4e5e6')
+        test_none('O-O=Q')
+
 
 class EngineIOTestCase(unittest.TestCase):
 

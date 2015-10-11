@@ -3,6 +3,7 @@
 from enum import Enum
 import logging
 import random
+import re
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +84,23 @@ class Move:
     """
     Particular move, e.g. e2e4.
     """
+
+    pgn_re = re.compile(r'^'
+        '('
+            '(?P<piece>[KQRBNP])?'
+            '(?P<old_pos_col>[a-h])?'
+            '(?P<old_pos_row>[1-8])?'
+            '(?P<capture>x)?'
+            '(?P<new_pos_col>[a-h])'
+            '(?P<new_pos_row>[1-8])'
+            '(=(?P<promotion>[QRBN]))?'
+        '|'
+            '(?P<castling>(O-O-O|O-O))'
+        ')'
+        '(?P<check>\+)?'
+        '(?P<checkmate>#)?'
+        '$'
+    )
 
     def __init__(self, piece=None, new_pos=None, board=None, notation=None):
         """
