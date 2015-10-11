@@ -163,6 +163,10 @@ class Move:
             return self.notation == other
         return self.old_pos == other.old_pos and self.new_pos == other.new_pos
 
+    # TODO same as for __eq__
+    def __hash__(self):
+        return hash(self.notation)
+
 
 class Piece:
     def __init__(self, player, board, column, row):
@@ -432,7 +436,7 @@ class Board:
             self.make_move(move)
 
     def bestmove(self):
-        move = sorted([self.active.rnd_move() for _ in range(20)],
+        move = sorted(set(self.active.rnd_move() for _ in range(200)),
                       key=lambda move: move.evaluate_complete())[-1]
         self.make_move(move)
         return move
