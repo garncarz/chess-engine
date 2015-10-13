@@ -42,6 +42,16 @@ class Position:
     def __eq__(self, other):
         return self.row == other.row and self.column == other.column
 
+    def is_row(self, row):
+        if isinstance(row, str):
+            row = ord(row) - ord('1') + 1
+        return self.row == row
+
+    def is_column(self, column):
+        if isinstance(column, str):
+            column = ord(column) - ord('a') + 1
+        return self.column == column
+
 
 class Direction:
     """
@@ -102,11 +112,13 @@ class Move:
         '$'
     )
 
-    def __init__(self, piece=None, new_pos=None, board=None, notation=None):
+    def __init__(self, piece=None, new_pos=None, board=None, notation=None,
+                 pgn=None):
         """
         Can be initialized with:
           - piece & new_pos
           - board & notation
+          - board & pgn
         """
         self.promotion = None
         if piece and new_pos:
@@ -136,6 +148,34 @@ class Move:
                     'to': Queen(self.piece.player, self.board,
                                 self.old_pos.column, self.old_pos.row),
                 }
+        elif board and pgn:
+            self.board = board
+
+            m = self.pgn_re.match(pgn).groupdict()
+            # TODO castling
+
+            self.new_pos = Position(m['new_pos_col'] + m['new_pos_row'])
+
+            pieces = self.board.active.pieces
+            pieces = filter(lambda p: m['piece'] in p.pgn_signs, pieces)
+            if m['old_pos_col']:
+                pieces = filter(lambda p: p.pos.is_column(m['old_pos_col']),
+                                pieces)
+            if m['old_pos_row']:
+                pieces = filter(lambda p: p.pos.is_row(m['old_pos_row']),
+                                pieces)
+            pieces = filter(lambda p: Move(p, self.new_pos) \
+                                      in p.possible_moves(),
+                            pieces)
+
+            pieces = list(pieces)
+            assert len(pieces) == 1
+            self.piece = pieces[0]
+            self.old_pos = self.piece.pos
+
+            # TODO promotion
+        else:
+            raise ValueError
 
         self.player = self.piece.player
         self.captured = self.board[self.new_pos]
@@ -252,6 +292,7 @@ class King(Piece):
         Direction(0, 1),
         Direction(1, 1),
     ]
+    pgn_signs = ['K']
 
 
 class StraightLineMixin:
@@ -262,31 +303,38 @@ class StraightLineMixin:
 class Rook(StraightLineMixin, Piece):
     capture_score = 30
     quadrant_dirs = [Direction(0, i) for i in range(1, 9)]
+    pgn_signs = ['R']
 
 
 class Bishop(StraightLineMixin, Piece):
     capture_score = 20
     quadrant_dirs = [Direction(i, i) for i in range(1, 9)]
+    pgn_signs = ['B']
 
 
 class Queen(StraightLineMixin, Piece):
     capture_score = 50
     quadrant_dirs = Rook.quadrant_dirs + Bishop.quadrant_dirs
+    pgn_signs = ['Q']
 
 
 class Knight(Piece):
     capture_score = 15
     quadrant_dirs = [Direction(2, 1)]
+    pgn_signs = ['N']
 
 
 class Pawn(Piece):
     capture_score = 1
+    pgn_signs = [None, '', 'P']
 
     def __init__(self, *args, **kwargs):
         self.heading = kwargs.pop('heading')
         super().__init__(*args, **kwargs)
 
+        self.starting_pos = self.pos
         self.dir_forward = Direction(0, self.heading)
+        self.dir_forward_2 = Direction(0, 2 * self.heading)
         self.dir_captures = [
             Direction(1, self.heading),
             Direction(-1, self.heading),
@@ -300,6 +348,9 @@ class Pawn(Piece):
             capture = self.board[self.pos + dir]
             if capture and capture.player != self.player:
                 yield dir
+        if self.pos == self.starting_pos:
+            if not self.board[self.pos + self.dir_forward]:
+                yield self.dir_forward_2
 
     def check_move_to(self, pos):
         if pos.column == self.pos.column:
@@ -370,6 +421,13 @@ class Player:
 
 
 class Board:
+    pgn_re = re.compile(r'('
+        '(?P<round>\d+(\.|\.\.\.))|'
+        '(?P<result>(1-0|0-1|1/2-1/2|\*))|'
+        '(?P<move>\S+)'
+        ')+'
+    )
+
     def __init__(self, sandbox=False):
         self.white = Player(Player.Color.white, self)
         self.black = Player(Player.Color.black, self)
@@ -472,6 +530,13 @@ class Board:
                 board += piece.sign if piece else '.'
             board += '\n'
         return board
+
+    def import_pgn(self, pgn):
+        for match in self.pgn_re.finditer(pgn):
+            groups = match.groupdict()
+            if groups['move']:
+                move = Move(board=self, pgn=groups['move'])
+                self.make_move(move)
 
 
 def send(msg):  # pragma: no cover

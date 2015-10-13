@@ -22,7 +22,7 @@ class EngineTestCase(unittest.TestCase):
     def test_possible_moves(self):
         pawn = self.board['e2']
         self.assertTrue(isinstance(pawn, og_engine.Pawn))
-        self.assertPossibleMoves(pawn, ['e2e3'])
+        self.assertPossibleMoves(pawn, ['e2e3', 'e2e4'])
 
         queen = self.board['d1']
         self.assertTrue(isinstance(queen, og_engine.Queen))
@@ -105,6 +105,13 @@ class EngineTestCase(unittest.TestCase):
         test_none('i5')
         test_none('e4e5e6')
         test_none('O-O=Q')
+
+    def test_pgn(self):
+        self.board.import_pgn('1. e4 e5 2. Nf3 d6 3. d4 Nf6 4. Nc3 exd4 '
+                              '5. Nxd4 Be7 6. Be2 ')
+        self.assertEqual(self.board['d4'].sign, '♘')
+        self.assertEqual(self.board['e7'].sign, '♝')
+        self.assertFalse(self.board['e5'])
 
 
 class EngineIOTestCase(unittest.TestCase):
