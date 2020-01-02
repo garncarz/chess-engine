@@ -4,3 +4,6 @@
 [![Coverage Status](https://coveralls.io/repos/garncarz/chess-engine/badge.svg?branch=master&service=github)](https://coveralls.io/github/garncarz/chess-engine?branch=master)
 
 Works with [PyChess](http://www.pychess.org/). So far very primitive (sometimes loses due to an incorrect move, doesn't recognise promotions, etc., sometimes even freezes?).
+
+
+<!-- ❄️ Hello to the GitHub Archive! ❄️ -->
